@@ -1,11 +1,14 @@
-FROM golang:alpine AS scrap
+FROM golang:alpine AS build
 
 # Add all the source code (except what's ignored
 # under `.dockerignore`) to the build context.
-ADD ./ /go/src/github.com/iosdevtrainee/Tense
+COPY . .
+
+RUN go version && go get -u -v golang.org/x/vgo
+RUN vgo install ./...
 
 RUN set -ex && \
-  cd /go/src/github.com/iosdevtrainee/Tense && \       
+  cd /$GOPATH/src/github.com/iosdevtrainee/Tense && \       
   CGO_ENABLED=0 go build \
         -tags netgo \
         -v -a \
@@ -13,9 +16,10 @@ RUN set -ex && \
   mv ./Tense /usr/bin/Tense
 
 FROM busybox
-
+ENV PORT=8080
+EXPOSE 8080
 # Retrieve the binary from the previous stage
-COPY --from=scrap /usr/bin/Tense /usr/local/bin/Tense
+COPY --from=build /usr/bin/Tense /usr/local/bin/Tense
 
 # Set the binary as the entrypoint of the container
-ENTRYPOINT [ "l7" ]
+ENTRYPOINT [ "Tense" ]
